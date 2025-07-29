@@ -1,0 +1,140 @@
+{% include "header.html" %}
+{% from "bootstrap5/form.html" import render_form %}
+{% block content %}
+    <section class="px-3 fs-4" >
+      <h1 id="live-date" style="margin-top: 0px;">{{ current_date }}</h1>
+      <h2 id="live-time">{{ current_time }}</h2>
+    </section>
+
+<section>
+    <h3 style="margin-top: 17px; text-align: left;">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <span class="alert
+          {% if category == 'success' %}
+            alert-success
+          {% elif category == 'error' %}
+            alert-danger
+          {% elif category == 'warning' %}
+            alert-warning
+          {% else %}
+            alert-info
+          {% endif %}
+          flash p"
+          style="text-align: center; margin-bottom: 0px; font-size: 16px; display:inline-block;">
+          {{ message }}
+        </span>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  Enter Task:
+</h3>
+        <!-- Row for Task + Due Date -->
+      <form action="{{ url_for('add_task') }}" method="POST">
+          {{ form.hidden_tag() }}
+
+          <!-- Row: Task Name | [Due Date + Due Time] -->
+          <div class="d-flex flex-wrap gap-2 mb-3">
+
+            <!-- Task Name (50%) -->
+            <div class="flex-grow-1" style="min-width: 300px; flex-basis: 0;">
+              <div class="form-floating">
+                {{ form.task(class="form-control", placeholder="Task Name") }}
+                <label>Task Name</label>
+              </div>
+            </div>
+
+            <!-- Group: Due Date and Due Time (50%) total) -->
+            <div class="d-flex gap-2" style="min-width: 300px; flex-basis: 0; flex-grow: 1;">
+              <!-- Due Date (50% of right half) -->
+              <div class="flex-fill">
+                <div class="form-floating">
+                  {{ form.due_date(class="form-control", type="date") }}
+                  <label>Due Date</label>
+                </div>
+              </div>
+
+              <!-- Due Time (50% of right half) -->
+              <div class="flex-fill">
+                <div class="form-floating">
+                  {{ form.due_time(class="form-control", type="time") }}
+                  <label>Due Time</label>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+
+
+            <!-- Inside your form -->
+            <div class="mb-3">
+              {{ form.additional_info(class="form-control tall-textarea", placeholder="Additional Information ", cols=50, rows=20) }}
+            </div>
+
+          <!-- Submit Button -->
+          <div class="text-end mb-4">
+            <button type="submit" class="btn btn-success btn-add-task">Add Task</button>
+          </div>
+      </form>
+      <!-- List -->
+
+
+      {% if all_tasks %}
+          {% for task in all_tasks %}
+                {% if not task.is_finished %}
+                    <div class="d-flex justify-content-between align-items-start p-2 mb-3 border rounded " id="{{ 'ongoing-bg' if task.due_date > today or (task.due_date == today and task.due_time and task.due_time > now_time) else 'late-bg' }}">
+                    <!-- Left Side: Task + Bullet Points + Due Date -->
+                    <div class="task-align-left">
+                        <p class="mb-1"><b><u>{{ task.task }}</u></b></p>
+                        <p class="mb-1">{{ (task.additional_info or "No additional info").replace('\n', '<br>')|safe }}</p>
+                        <p class="mb-0">
+                            <i class="text-danger">Deadline: {{ task.due_date.strftime('%B %d, %Y') }} at {{ task.due_time.strftime('%I:%M %p') }}</i>
+                        </p>
+                    </div>
+
+                    <div class="d-flex" style="gap: 0.25rem;">
+                        <form action="{{ url_for('complete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                          <button class="btn btn-sm btn-primary border-white text-white d-flex align-items-center justify-content-center add-delete-buttons" title="Complete Task" aria-label="Complete Task">✓</button>
+                        </form>
+                        <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="display: inline;">
+                          <button class="btn btn-sm btn-danger border-white text-white d-flex align-items-center justify-content-center add-delete-buttons" title="Delete Task" aria-label="Delete Task">✗</button>
+                        </form>
+                    </div>
+                  </div>
+                {% endif %}
+            {% endfor %}
+            {% for task in all_tasks %}
+                 {% if task.is_finished %}
+                    <div class="d-flex justify-content-between align-items-start p-2 mb-3 border rounded " id="finished-bg">
+                    <!-- Left Side: Task + Bullet Points + Due Date -->
+                    <div class="task-align-left">
+                        <p class="mb-1"><b><u>{{ task.task }}</u></b></p>
+                        <p class="mb-1">{{ task.additional_info or "No additional info" }}</p>
+                        <p class="mb-0">
+                           <i>Deadline: {{ task.due_date.strftime('%B %d, %Y') }} at {{ task.due_time.strftime('%I:%M %p') }}</i>
+                        </p>
+                    </div>
+
+                    <div class="d-flex" style="gap: 0.25rem;">
+                        {% if task.due_date > today or (task.due_date == today and task.due_time > now_time) %}
+                        <form action="{{ url_for('complete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                          <button class="btn btn-sm btn-primary border-white text-white d-flex align-items-center justify-content-center add-delete-buttons" title="Complete Task" aria-label="Complete Task">↺</button>
+                        </form>
+                        {% endif %}
+                        <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="display: inline;">
+                          <button class="btn btn-sm btn-danger border-white text-white d-flex align-items-center justify-content-center add-delete-buttons" title="Delete Task" aria-label="Delete Task">✗</button>
+                        </form>
+                    </div>
+                  </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+          <h3>No tasks yet. Add your first one!</h3>
+      {% endif %}
+
+
+</section>
+{% include "footer.html" %}
+{% endblock %}
