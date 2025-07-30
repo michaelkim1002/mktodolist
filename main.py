@@ -1,4 +1,4 @@
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timezone
 from dotenv import load_dotenv
 from email.message import EmailMessage
 from flask import Flask, render_template, redirect, url_for, flash, request
@@ -64,7 +64,11 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 def get_local_now():
-    local_tz = pytz.timezone("US/Central")
+    utc_now = datetime.now(timezone.utc)
+    central = pytz.timezone("US/Central")
+    local_now = utc_now.astimezone(central)
+
+    return local_now
     return datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
     try:
@@ -361,7 +365,9 @@ def contact():
 def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
-
+now_utc = datetime.utcnow().date()
+now_central = get_local_now().date()
+print("UTC Date:", now_utc, "US/Central Date:", now_central)
 if __name__ == "__main__":
     threading.Thread(target=check_late_tasks, daemon=True).start()
     app.run(debug=False, port=5003)
