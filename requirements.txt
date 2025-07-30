@@ -10,6 +10,7 @@ flask_sqlalchemy==3.1.1
 SQLAlchemy==2.0.42
 gunicorn==23.0.0
 psycopg2-binary==2.9.10
+email-validator==2.0.0
 
 python-dotenv~=1.1.1
 Flask-Bootstrap~=3.3.7.1
