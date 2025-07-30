@@ -7,8 +7,8 @@
     </section>
 
 <section>
-    <h3 style="margin-top: 17px; text-align: left;">
-  {% with messages = get_flashed_messages(with_categories=true) %}
+    <div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
         <span class="alert
@@ -28,8 +28,11 @@
       {% endfor %}
     {% endif %}
   {% endwith %}
-  Enter Task:
-</h3>
+    </div>
+    <h3 style="margin-top: 17px; text-align: left;">
+      Enter Task:
+    </h3>
+
         <!-- Row for Task + Due Date -->
       <form action="{{ url_for('add_task') }}" method="POST">
           {{ form.hidden_tag() }}
