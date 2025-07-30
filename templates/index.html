@@ -87,12 +87,7 @@
       {% if all_tasks %}
           {% for task in all_tasks %}
                 {% if not task.is_finished %}
-                   <div class="d-flex justify-content-between align-items-start p-2 mb-3 border rounded"
-                     id="{% if task.due_date > today or (task.due_date == today and (task.due_time is none or task.due_time > now_time)) %}
-                             ongoing-bg
-                         {% else %}
-                             late-bg
-                         {% endif %}">
+                    <div class="d-flex justify-content-between align-items-start p-2 mb-3 border rounded" id="{% if task.due_date > today or (task.due_date == today and (task.due_time is none or task.due_time > now_time)) %}ongoing-bg{% else %}late-bg{% endif %}">
                     <!-- Left Side: Task + Bullet Points + Due Date -->
                     <div class="task-align-left">
                         <p class="mb-1"><b><u>{{ task.task }}</u></b></p>
