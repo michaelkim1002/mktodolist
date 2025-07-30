@@ -34,7 +34,7 @@ def load_user(user_id):
 
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///posts.db")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///tasks.db")
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -65,7 +65,8 @@ with app.app_context():
     db.create_all()
 def send_email(to_email, subject, body):
     try:
-        with smtplib.SMTP_SSL("smtp.mail.yahoo.com", 465, timeout=10) as connection:
+        with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
+            connection.starttls()
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
                 password=os.environ.get("ADMIN_EMAIL_PASSWORD")
@@ -85,7 +86,7 @@ def check_late_tasks():
         while True:
             local_tz = pytz.timezone("US/Central")
             now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
-            today = now.date()
+            today = date.today()
 
             overdue_tasks = db.session.execute(
                 db.select(Task).where(
@@ -98,7 +99,6 @@ def check_late_tasks():
                 )
             ).scalars().all()
 
-            updated = False
             for task in overdue_tasks:
                 user = db.session.get(User, task.user_id)
                 subject = f"Task Overdue: {task.task}"
@@ -111,16 +111,11 @@ def check_late_tasks():
                     f"Please log in to update or complete it.\n\n"
                     f"- MKTodoList"
                 )
-
                 if send_email(user.email, subject, body):
                     task.notified = True
-                    updated = True
+                    db.session.commit()
                 else:
                     db.session.rollback()
-
-            if updated:
-                db.session.commit()
-
             time_module.sleep(60)
 
 @app.route('/', methods=["GET"])
