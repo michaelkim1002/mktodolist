@@ -87,6 +87,7 @@ def send_email(to_email, subject, body):
         return False
 
 def check_late_tasks():
+    print("[check_late_tasks] Thread started")
     with app.app_context():
         while True:
             try:
@@ -377,5 +378,6 @@ def logout():
     return redirect(url_for('show_tasks'))
 
 if __name__ == "__main__":
+    print("Starting background late task checker thread...")
     threading.Thread(target=check_late_tasks, daemon=True).start()
     app.run(debug=False, port=5003)
