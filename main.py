@@ -15,6 +15,7 @@ import os
 import smtplib
 import threading
 import time as time_module
+import pytz
 
 verification_codes = {}
 load_dotenv()
@@ -83,7 +84,8 @@ def send_email(to_email, subject, body):
 def check_late_tasks():
     with app.app_context():
         while True:
-            now = datetime.now()
+            local_tz = pytz.timezone("US/Central")
+            now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
             today = date.today()
 
             overdue_tasks = db.session.execute(
@@ -123,7 +125,8 @@ def show_tasks():
         tasks = result.scalars().all()
     else:
         tasks = []
-    now = datetime.now()
+    local_tz = pytz.timezone("US/Central")
+    now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
     form = CreateTaskForm()
     return render_template("index.html", all_tasks=tasks, current_date=now.strftime("%B %d, %Y"), current_time=now.strftime("%I:%M:%S %p"), form=form, current_user=current_user, today=date.today(), now_time=now.time())
 
@@ -136,7 +139,8 @@ def add_task():
 
     if form.validate_on_submit():
         today = date.today()
-        now = datetime.now().replace(second=0, microsecond=0)
+        local_tz = pytz.timezone("US/Central")
+        now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
         due_date = form.due_date.data
         user_entered_time = form.due_time.data
         due_time = user_entered_time or time(0, 0)
