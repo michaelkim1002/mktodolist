@@ -377,7 +377,7 @@ def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
 
+threading.Thread(target=check_late_tasks, daemon=True).start()
 if __name__ == "__main__":
     print("Starting background late task checker thread...")
-    threadisung.Thread(target=check_late_tasks, daemon=True).start()
     app.run(debug=False, port=5003)
