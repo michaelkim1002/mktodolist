@@ -138,12 +138,13 @@ def add_task():
         today = date.today()
         now = datetime.now().replace(second=0, microsecond=0)
         due_date = form.due_date.data
-        due_time = form.due_time.data or time(00, 00)
+        user_entered_time = form.due_time.data
+        due_time = user_entered_time or time(0, 0)
 
         if due_date < today:
             flash("Please choose a future due date.", category="warning")
             return redirect(url_for("show_tasks"))
-        elif due_date == today and due_time <= now.time():
+        elif due_date == today and user_entered_time and due_time <= now.time():
             flash("Please choose a future time today.", category="warning")
             return redirect(url_for("show_tasks"))
 
