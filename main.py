@@ -141,11 +141,16 @@ def add_task():
         today = date.today()
         local_tz = pytz.timezone("US/Central")
         now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
+
         due_date = form.due_date.data
         user_entered_time = form.due_time.data
         due_time = user_entered_time or time(0, 0)
 
-        due_datetime = datetime.combine(due_date, due_time)
+        if not due_date:
+            flash("Please select a due date.", category="warning")
+            return redirect(url_for("show_tasks"))
+
+        due_datetime = local_tz.localize(datetime.combine(due_date, due_time))
 
         if due_datetime <= now:
             flash("Please choose a due date and time in the future.", category="warning")
