@@ -142,7 +142,7 @@ def show_tasks():
     local_tz = pytz.timezone("US/Central")
     now = get_local_now()
     form = CreateTaskForm()
-    return render_template("index.html", all_tasks=tasks, current_date=now.strftime("%B %d, %Y"), current_time=now.strftime("%I:%M:%S %p"), form=form, current_user=current_user, today=date.today(), now_time=now.time())
+    return render_template("index.html", all_tasks=tasks, current_date=now.strftime("%B %d, %Y"), current_time=now.strftime("%I:%M:%S %p"), form=form, current_user=current_user, today=now.date(), now_time=now.time())
 
 @app.route('/add-task', methods=["POST"])
 def add_task():
