@@ -1,4 +1,4 @@
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from dotenv import load_dotenv
 from email.message import EmailMessage
 from flask import Flask, render_template, redirect, url_for, flash, request
@@ -145,11 +145,10 @@ def add_task():
         user_entered_time = form.due_time.data
         due_time = user_entered_time or time(0, 0)
 
-        if due_date < today:
-            flash("Please choose a future due date.", category="warning")
-            return redirect(url_for("show_tasks"))
-        elif due_date == today and user_entered_time and due_time <= now.time():
-            flash("Please choose a future time today.", category="warning")
+        due_datetime = datetime.combine(due_date, due_time)
+
+        if due_datetime <= now:
+            flash("Please choose a due date and time in the future.", category="warning")
             return redirect(url_for("show_tasks"))
 
         new_task = Task(
