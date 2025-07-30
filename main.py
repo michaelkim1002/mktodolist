@@ -63,6 +63,9 @@ class Task(db.Model):
 
 with app.app_context():
     db.create_all()
+def get_local_now():
+    local_tz = pytz.timezone("US/Central")
+    return datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
     try:
         with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
@@ -87,8 +90,7 @@ def check_late_tasks():
     with app.app_context():
         while True:
             try:
-                local_tz = pytz.timezone("US/Central")
-                now = datetime.now(local_tz).replace(second=0, microsecond=0)
+                now = get_local_now()
                 today = now.date()
 
                 overdue_tasks = db.session.execute(
@@ -138,7 +140,7 @@ def show_tasks():
     else:
         tasks = []
     local_tz = pytz.timezone("US/Central")
-    now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
+    now = get_local_now()
     form = CreateTaskForm()
     return render_template("index.html", all_tasks=tasks, current_date=now.strftime("%B %d, %Y"), current_time=now.strftime("%I:%M:%S %p"), form=form, current_user=current_user, today=date.today(), now_time=now.time())
 
@@ -151,8 +153,7 @@ def add_task():
 
     if form.validate_on_submit():
         today = date.today()
-        local_tz = pytz.timezone("US/Central")
-        now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
+        now = get_local_now()
 
         due_date = form.due_date.data
         user_entered_time = form.due_time.data
