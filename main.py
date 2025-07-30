@@ -136,7 +136,7 @@ def add_task():
 
     if form.validate_on_submit():
         today = date.today()
-        now = datetime.now()
+        now = datetime.now().replace(second=0, microsecond=0)
         due_date = form.due_date.data
         due_time = form.due_time.data or time(00, 00)
 
