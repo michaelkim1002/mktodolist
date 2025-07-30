@@ -11,6 +11,7 @@ from random import randint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text, Boolean, Date, Time
 from werkzeug.security import generate_password_hash, check_password_hash
+from zoneinfo import ZoneInfo
 import os
 import smtplib
 import threading
@@ -64,12 +65,7 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 def get_local_now():
-    utc_now = datetime.now(timezone.utc)
-    central = pytz.timezone("US/Central")
-    local_now = utc_now.astimezone(central)
-
-    return local_now
-    return datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
+    return datetime.now(timezone.utc).astimezone(ZoneInfo("America/Chicago"))
 def send_email(to_email, subject, body):
     try:
         with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
@@ -89,44 +85,41 @@ def send_email(to_email, subject, body):
         print(f"Email failed to {to_email}: {e}")
         return False
 
-
 def check_late_tasks():
     with app.app_context():
         while True:
             try:
                 now = get_local_now()
-                today = now.date()
 
-                overdue_tasks = db.session.execute(
+                tasks = db.session.execute(
                     db.select(Task).where(
                         Task.is_finished == False,
-                        Task.notified == False,
-                        (
-                                (Task.due_date < today) |
-                                ((Task.due_date == today) &
-                                 (Task.due_time != None) &
-                                 (Task.due_time < now.time()))
-                        )
+                        Task.notified == False
                     )
                 ).scalars().all()
 
-                for task in overdue_tasks:
-                    user = db.session.get(User, task.user_id)
-                    subject = f"Task Overdue: {task.task}"
-                    due_time_str = task.due_time.strftime('%I:%M %p') if task.due_time else "No specific time"
-                    body = (
-                        f"Hi {user.username},\n\n"
-                        f"The following task is now overdue:\n\n"
-                        f"Task: {task.task}\n"
-                        f"Due: {task.due_date.strftime('%B %d, %Y')} at {due_time_str}\n\n"
-                        f"Please log in to update or complete it.\n\n"
-                        f"- MKTodoList"
-                    )
+                for task in tasks:
+                    # Combine date and time
+                    due_time = task.due_time or time(0, 0)
+                    due_dt = local_tz.localize(datetime.combine(task.due_date, due_time))
 
-                    if send_email(user.email, subject, body):
-                        task.notified = True
-                    else:
-                        print(f"Failed to send email to {user.email} for task '{task.task}'")
+                    if due_dt <= now:
+                        user = db.session.get(User, task.user_id)
+                        subject = f"Task Overdue: {task.task}"
+                        due_time_str = task.due_time.strftime('%I:%M %p') if task.due_time else "No specific time"
+                        body = (
+                            f"Hi {user.username},\n\n"
+                            f"The following task is now overdue:\n\n"
+                            f"Task: {task.task}\n"
+                            f"Due: {task.due_date.strftime('%B %d, %Y')} at {due_time_str}\n\n"
+                            f"Please log in to update or complete it.\n\n"
+                            f"- MKTodoList"
+                        )
+
+                        if send_email(user.email, subject, body):
+                            task.notified = True
+                        else:
+                            print(f"Failed to send email to {user.email} for task '{task.task}'")
 
                 db.session.commit()
 
@@ -156,18 +149,16 @@ def add_task():
         return redirect(url_for("login"))
 
     if form.validate_on_submit():
-        today = date.today()
-        now = get_local_now()
-
+        now = get_local_now()  # timezone-aware local datetime
         due_date = form.due_date.data
-        user_entered_time = form.due_time.data
-        due_time = user_entered_time or time(0, 0)
+        due_time = form.due_time.data or time(0, 0)
 
         if not due_date:
             flash("Please select a due date.", category="warning")
             return redirect(url_for("show_tasks"))
 
-        due_datetime = local_tz.localize(datetime.combine(due_date, due_time))
+        # Combine due date and time, and make it timezone-aware
+        due_datetime = datetime.combine(due_date, due_time).replace(tzinfo=ZoneInfo("America/Chicago"))
 
         if due_datetime <= now:
             flash("Please choose a due date and time in the future.", category="warning")
@@ -195,10 +186,20 @@ def add_task():
             for error in errors:
                 flash(f"{error}", category="warning")
 
-    now = datetime.now()
+    # fallback render
+    now = get_local_now()
     result = db.session.execute(db.select(Task).where(Task.user_id == current_user.id).order_by(Task.due_date.asc()))
     tasks = result.scalars().all()
-    return render_template("index.html", all_tasks=tasks, current_date=now.strftime("%B %d, %Y"), current_time=now.strftime("%I:%M:%S %p"), form=form, current_user=current_user, today=date.today(), now_time=now.time())
+    return render_template(
+        "index.html",
+        all_tasks=tasks,
+        current_date=now.strftime("%B %d, %Y"),
+        current_time=now.strftime("%I:%M:%S %p"),
+        form=form,
+        current_user=current_user,
+        today=now.date(),
+        now_time=now.time()
+    )
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
