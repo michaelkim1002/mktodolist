@@ -65,7 +65,7 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 def get_local_now():
-    return datetime.now(timezone.utc).astimezone(ZoneInfo("America/Chicago"))
+    return datetime.now(ZoneInfo("America/Chicago")).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
     try:
         with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
@@ -90,7 +90,9 @@ def check_late_tasks():
         while True:
             try:
                 now = get_local_now()
+                local_today = now.date()
 
+                # Fetch all unfinished, unnotified tasks
                 tasks = db.session.execute(
                     db.select(Task).where(
                         Task.is_finished == False,
@@ -99,11 +101,12 @@ def check_late_tasks():
                 ).scalars().all()
 
                 for task in tasks:
-                    # Combine date and time
+                    # Combine due date and time into timezone-aware datetime
                     due_time = task.due_time or time(0, 0)
-                    due_dt = local_tz.localize(datetime.combine(task.due_date, due_time))
+                    due_datetime = datetime.combine(task.due_date, due_time).replace(tzinfo=ZoneInfo("America/Chicago"))
 
-                    if due_dt <= now:
+                    # Check if task is overdue
+                    if due_datetime <= now:
                         user = db.session.get(User, task.user_id)
                         subject = f"Task Overdue: {task.task}"
                         due_time_str = task.due_time.strftime('%I:%M %p') if task.due_time else "No specific time"
@@ -157,8 +160,8 @@ def add_task():
             flash("Please select a due date.", category="warning")
             return redirect(url_for("show_tasks"))
 
-        # Combine due date and time, and make it timezone-aware
-        due_datetime = datetime.combine(due_date, due_time).replace(tzinfo=ZoneInfo("America/Chicago"))
+        local_tz = ZoneInfo("America/Chicago")
+        due_datetime = datetime.combine(due_date, due_time).replace(tzinfo=local_tz)
 
         if due_datetime <= now:
             flash("Please choose a due date and time in the future.", category="warning")
