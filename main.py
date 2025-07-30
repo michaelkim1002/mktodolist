@@ -81,42 +81,54 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Email failed to {to_email}: {e}")
         return False
+
+
 def check_late_tasks():
     with app.app_context():
         while True:
-            local_tz = pytz.timezone("US/Central")
-            now = datetime.now(pytz.utc).astimezone(local_tz).replace(second=0, microsecond=0)
-            today = date.today()
+            try:
+                local_tz = pytz.timezone("US/Central")
+                now = datetime.now(local_tz).replace(second=0, microsecond=0)
+                today = now.date()
 
-            overdue_tasks = db.session.execute(
-                db.select(Task).where(
-                    Task.is_finished == False,
-                    Task.notified == False,
-                    (
-                        (Task.due_date < today) |
-                        ((Task.due_date == today) & (Task.due_time != None) & (Task.due_time < now.time()))
+                overdue_tasks = db.session.execute(
+                    db.select(Task).where(
+                        Task.is_finished == False,
+                        Task.notified == False,
+                        (
+                                (Task.due_date < today) |
+                                ((Task.due_date == today) &
+                                 (Task.due_time != None) &
+                                 (Task.due_time < now.time()))
+                        )
                     )
-                )
-            ).scalars().all()
+                ).scalars().all()
 
-            for task in overdue_tasks:
-                user = db.session.get(User, task.user_id)
-                subject = f"Task Overdue: {task.task}"
-                due_time_str = task.due_time.strftime('%I:%M %p') if task.due_time else "No specific time"
-                body = (
-                    f"Hi {user.username},\n\n"
-                    f"The following task is now overdue:\n\n"
-                    f"Task: {task.task}\n"
-                    f"Due: {task.due_date.strftime('%B %d, %Y')} at {due_time_str}\n\n"
-                    f"Please log in to update or complete it.\n\n"
-                    f"- MKTodoList"
-                )
-                if send_email(user.email, subject, body):
-                    task.notified = True
-                    db.session.commit()
-                else:
-                    db.session.rollback()
-            time_module.sleep(60)
+                for task in overdue_tasks:
+                    user = db.session.get(User, task.user_id)
+                    subject = f"Task Overdue: {task.task}"
+                    due_time_str = task.due_time.strftime('%I:%M %p') if task.due_time else "No specific time"
+                    body = (
+                        f"Hi {user.username},\n\n"
+                        f"The following task is now overdue:\n\n"
+                        f"Task: {task.task}\n"
+                        f"Due: {task.due_date.strftime('%B %d, %Y')} at {due_time_str}\n\n"
+                        f"Please log in to update or complete it.\n\n"
+                        f"- MKTodoList"
+                    )
+
+                    if send_email(user.email, subject, body):
+                        task.notified = True
+                    else:
+                        print(f"Failed to send email to {user.email} for task '{task.task}'")
+
+                db.session.commit()
+
+            except Exception as e:
+                print("Error in check_late_tasks:", e)
+                db.session.rollback()
+
+            time_module.sleep(30)
 
 @app.route('/', methods=["GET"])
 def show_tasks():
