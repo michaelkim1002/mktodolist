@@ -18,6 +18,7 @@ import threading
 import time as time_module
 import pytz
 
+local_tz = ZoneInfo("America/Chicago")
 verification_codes = {}
 load_dotenv()
 
@@ -65,7 +66,7 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 def get_local_now():
-    return datetime.now(ZoneInfo("America/Chicago")).replace(second=0, microsecond=0)
+    return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
     try:
         with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
@@ -90,7 +91,7 @@ def check_late_tasks():
         while True:
             try:
                 now = get_local_now()
-                local_today = now.date()
+                print(f"[check_late_tasks] now: {now} (tzinfo={now.tzinfo})")
 
                 # Fetch all unfinished, unnotified tasks
                 tasks = db.session.execute(
@@ -101,11 +102,13 @@ def check_late_tasks():
                 ).scalars().all()
 
                 for task in tasks:
-                    # Combine due date and time into timezone-aware datetime
                     due_time = task.due_time or time(0, 0)
-                    due_datetime = datetime.combine(task.due_date, due_time).replace(tzinfo=ZoneInfo("America/Chicago"))
+                    naive_due_datetime = datetime.combine(task.due_date, due_time)
+                    due_datetime = naive_due_datetime.replace(tzinfo=local_tz)
 
-                    # Check if task is overdue
+                    print(f"[check_late_tasks] task due_datetime: {due_datetime} (tzinfo={due_datetime.tzinfo})")
+                    print(f"[check_late_tasks] due_datetime <= now? {due_datetime <= now}")
+
                     if due_datetime <= now:
                         user = db.session.get(User, task.user_id)
                         subject = f"Task Overdue: {task.task}"
@@ -118,7 +121,6 @@ def check_late_tasks():
                             f"Please log in to update or complete it.\n\n"
                             f"- MKTodoList"
                         )
-
                         if send_email(user.email, subject, body):
                             task.notified = True
                         else:
@@ -152,7 +154,7 @@ def add_task():
         return redirect(url_for("login"))
 
     if form.validate_on_submit():
-        now = get_local_now()  # timezone-aware local datetime
+        now = get_local_now()
         due_date = form.due_date.data
         due_time = form.due_time.data or time(0, 0)
 
@@ -160,8 +162,12 @@ def add_task():
             flash("Please select a due date.", category="warning")
             return redirect(url_for("show_tasks"))
 
-        local_tz = ZoneInfo("America/Chicago")
-        due_datetime = datetime.combine(due_date, due_time).replace(tzinfo=local_tz)
+        naive_due_datetime = datetime.combine(due_date, due_time)
+        due_datetime = naive_due_datetime.replace(tzinfo=local_tz)
+
+        print(f"[add_task] now: {now} (tzinfo={now.tzinfo})")
+        print(f"[add_task] due_datetime: {due_datetime} (tzinfo={due_datetime.tzinfo})")
+        print(f"[add_task] due_datetime <= now? {due_datetime <= now}")
 
         if due_datetime <= now:
             flash("Please choose a due date and time in the future.", category="warning")
@@ -184,12 +190,12 @@ def add_task():
             return redirect(url_for("show_tasks"))
 
         return redirect(url_for("show_tasks"))
+
     else:
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f"{error}", category="warning")
 
-    # fallback render
     now = get_local_now()
     result = db.session.execute(db.select(Task).where(Task.user_id == current_user.id).order_by(Task.due_date.asc()))
     tasks = result.scalars().all()
@@ -369,9 +375,7 @@ def contact():
 def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
-now_utc = datetime.utcnow().date()
-now_central = get_local_now().date()
-print("UTC Date:", now_utc, "US/Central Date:", now_central)
+
 if __name__ == "__main__":
     threading.Thread(target=check_late_tasks, daemon=True).start()
     app.run(debug=False, port=5003)
