@@ -73,29 +73,25 @@ def get_local_now():
 def send_email(to_email, subject, body):
     print(f"[send_email] Trying to send email to {to_email}")
     try:
-        smtp_server = "smtp.mail.yahoo.com"
-        port = 465
-        print(f"[send_email] Connecting to {smtp_server}:{port} with SSL")
-        with smtplib.SMTP_SSL(smtp_server, port, timeout=10) as connection:
-            print("[send_email] Logging in...")
+        with smtplib.SMTP("smtp.mail.yahoo.com",587) as connection:
+            connection.starttls()
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
                 password=os.environ.get("ADMIN_EMAIL_PASSWORD")
             )
-            print("[send_email] Login successful")
-
             msg = EmailMessage()
             msg["Subject"] = subject
             msg["From"] = os.environ.get("ADMIN_EMAIL")
             msg["To"] = to_email
             msg.set_content(body)
-
             connection.send_message(msg)
-            print("[send_email] Email sent successfully")
         return True
     except Exception as e:
-        print(f"[send_email] Email failed to {to_email}: {e}")
+        print(f"Email failed to {to_email}: {e}")
         return False
+def send_email_async(to_email, subject, body):
+    """Send email in a separate thread to avoid blocking."""
+    threading.Thread(target=send_email, args=(to_email, subject, body), daemon=True).start()
 def check_late_tasks():
     print("[check_late_tasks] Thread started")
     with app.app_context():
@@ -132,7 +128,7 @@ def check_late_tasks():
                             f"Please log in to update or complete it.\n\n"
                             f"- MKTodoList"
                         )
-                        if send_email(user.email, subject, body):
+                        if send_email_async(user.email, subject, body):
                             task.notified = True
                         else:
                             print(f"Failed to send email to {user.email} for task '{task.task}'")
@@ -248,7 +244,7 @@ def register():
             f"Thanks for signing up for MKTodoList, a handy website to help you maintain your everyday tasks.\n\n"
             f"Best,\nMKTodoList"
         )
-        send_email(user_email, subject, body)
+        send_email_async(user_email, subject, body)
         login_user(new_user)
         return redirect(url_for("show_tasks"))
 
@@ -272,7 +268,7 @@ def reset_password():
                 code = str(randint(100000, 999999))
                 verification_codes[email] = code
 
-                send_email(
+                send_email_async(
                     to_email=email,
                     subject="Your Verification Code",
                     body=f"Your verification code is: {code}"
