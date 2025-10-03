@@ -72,7 +72,8 @@ def get_local_now():
     return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
     try:
-        with smtplib.SMTP_SSL("smtp.mail.yahoo.com", 465) as connection:
+        with smtplib.SMTP("smtp.mail.yahoo.com", 587) as connection:
+            connection.starttls()
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
                 password=os.environ.get("ADMIN_EMAIL_PASSWORD")
@@ -87,9 +88,6 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Email failed to {to_email}: {e}")
         return False
-def send_email_async(to_email, subject, body):
-    """Send email in a separate thread to avoid blocking."""
-    threading.Thread(target=send_email, args=(to_email, subject, body), daemon=True).start()
 def check_late_tasks():
     print("[check_late_tasks] Thread started")
     with app.app_context():
@@ -126,7 +124,7 @@ def check_late_tasks():
                             f"Please log in to update or complete it.\n\n"
                             f"- MKTodoList"
                         )
-                        if send_email_async(user.email, subject, body):
+                        if send_email(user.email, subject, body):
                             task.notified = True
                         else:
                             print(f"Failed to send email to {user.email} for task '{task.task}'")
@@ -242,7 +240,7 @@ def register():
             f"Thanks for signing up for MKTodoList, a handy website to help you maintain your everyday tasks.\n\n"
             f"Best,\nMKTodoList"
         )
-        send_email_async(user_email, subject, body)
+        send_email(user_email, subject, body)
         login_user(new_user)
         return redirect(url_for("show_tasks"))
 
@@ -266,7 +264,7 @@ def reset_password():
                 code = str(randint(100000, 999999))
                 verification_codes[email] = code
 
-                send_email_async(
+                send_email(
                     to_email=email,
                     subject="Your Verification Code",
                     body=f"Your verification code is: {code}"
