@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from forms import CreateTaskForm, RegisterForm, LoginForm, ContactForm, NewPasswordForm
 from random import randint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, Text, Boolean, Date, Time
+from sqlalchemy import Integer, String, Text, Boolean, Date, Time, func
 from werkzeug.security import generate_password_hash, check_password_hash
 from zoneinfo import ZoneInfo
 import os
@@ -36,7 +36,10 @@ def load_user(user_id):
 
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///tasks.db")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    "DB_URI",
+    "postgresql://username:password@localhost:5432/mktodolist"
+)
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
