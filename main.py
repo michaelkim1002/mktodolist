@@ -86,10 +86,12 @@ def send_email(to_email, subject, body):
                 msg.set_content(body)
                 connection.send_message(msg)
             print(f"[send_email_async] Sent email to {to_email}")
+        except smtplib.SMTPAuthenticationError:
+            print(f"[send_email] SMTP Authentication Error for {to_email}")
         except smtplib.SMTPException as e:
-            print(f"[send_email_async] SMTP error for {to_email}: {e}")
+            print(f"[send_email] SMTP Exception for {to_email}: {e}")
         except Exception as e:
-            print(f"[send_email_async] General error for {to_email}: {e}")
+            print(f"[send_email] General error for {to_email}: {e}")
 
     threading.Thread(target=task, daemon=True).start()
 
