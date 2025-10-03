@@ -73,8 +73,7 @@ def get_local_now():
 def send_email(to_email, subject, body):
     print(f"[send_email] Trying to send email to {to_email}")
     try:
-        with smtplib.SMTP("smtp.mail.yahoo.com",587) as connection:
-            connection.starttls()
+        with smtplib.SMTP_SSL("smtp.mail.yahoo.com",465, timeout=10) as connection:
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
                 password=os.environ.get("ADMIN_EMAIL_PASSWORD")
