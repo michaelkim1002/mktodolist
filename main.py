@@ -71,23 +71,28 @@ with app.app_context():
 def get_local_now():
     return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
-    try:
-        with smtplib.SMTP("smtp.mail.yahoo.com", 587) as connection:
-            connection.starttls()
-            connection.login(
-                user=os.environ.get("ADMIN_EMAIL"),
-                password=os.environ.get("ADMIN_EMAIL_PASSWORD")
-            )
-            msg = EmailMessage()
-            msg["Subject"] = subject
-            msg["From"] = os.environ.get("ADMIN_EMAIL")
-            msg["To"] = to_email
-            msg.set_content(body)
-            connection.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Email failed to {to_email}: {e}")
-        return False
+    def task():
+        try:
+            with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
+                connection.starttls()
+                connection.login(
+                    user=os.environ.get("ADMIN_EMAIL"),
+                    password=os.environ.get("ADMIN_EMAIL_PASSWORD")
+                )
+                msg = EmailMessage()
+                msg["Subject"] = subject
+                msg["From"] = os.environ.get("ADMIN_EMAIL")
+                msg["To"] = to_email
+                msg.set_content(body)
+                connection.send_message(msg)
+            print(f"[send_email_async] Sent email to {to_email}")
+        except smtplib.SMTPException as e:
+            print(f"[send_email_async] SMTP error for {to_email}: {e}")
+        except Exception as e:
+            print(f"[send_email_async] General error for {to_email}: {e}")
+
+    threading.Thread(target=task, daemon=True).start()
+
 def check_late_tasks():
     print("[check_late_tasks] Thread started")
     with app.app_context():
