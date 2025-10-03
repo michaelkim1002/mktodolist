@@ -73,22 +73,29 @@ def get_local_now():
 def send_email(to_email, subject, body):
     print(f"[send_email] Trying to send email to {to_email}")
     try:
-        with smtplib.SMTP_SSL("smtp.mail.yahoo.com",465, timeout=10) as connection:
+        smtp_server = "smtp.mail.yahoo.com"
+        port = 465
+        print(f"[send_email] Connecting to {smtp_server}:{port} with SSL")
+        with smtplib.SMTP_SSL(smtp_server, port, timeout=10) as connection:
+            print("[send_email] Logging in...")
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
                 password=os.environ.get("ADMIN_EMAIL_PASSWORD")
             )
+            print("[send_email] Login successful")
+
             msg = EmailMessage()
             msg["Subject"] = subject
             msg["From"] = os.environ.get("ADMIN_EMAIL")
             msg["To"] = to_email
             msg.set_content(body)
+
             connection.send_message(msg)
+            print("[send_email] Email sent successfully")
         return True
     except Exception as e:
-        print(f"Email failed to {to_email}: {e}")
+        print(f"[send_email] Email failed to {to_email}: {e}")
         return False
-
 def check_late_tasks():
     print("[check_late_tasks] Thread started")
     with app.app_context():
