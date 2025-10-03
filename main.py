@@ -129,10 +129,9 @@ def check_late_tasks():
                             f"Please log in to update or complete it.\n\n"
                             f"- MKTodoList"
                         )
-                        if send_email(user.email, subject, body):
-                            task.notified = True
-                        else:
-                            print(f"Failed to send email to {user.email} for task '{task.task}'")
+                        send_email(user.email, subject, body)
+                        task.notified = True
+
 
                 db.session.commit()
 
@@ -357,25 +356,19 @@ def contact():
         message = form.message.data
 
         admin_email = os.environ.get("ADMIN_EMAIL")
-        admin_password = os.environ.get("ADMIN_EMAIL_PASSWORD")
-
-        msg = EmailMessage()
-        msg["Subject"] = f"{subject}"
-        msg["From"] = admin_email
-        msg["To"] = admin_email
-        msg.set_content(
-            f"New Feedback Message: {message}"
-        )
-        try:
-            with smtplib.SMTP("smtp.mail.yahoo.com", 587) as connection:
-                connection.starttls()
-                connection.login(admin_email, admin_password)
-                connection.send_message(msg)
-            flash("Message Sent", category="success")
+        if not admin_email:
+            flash("Admin email is not configured.", category="error")
             return redirect(url_for("contact"))
-        except Exception as e:
-            print(f"Error sending message: {e}")
-            flash("An error occurred while sending your message. Please try again later.", category="error")
+
+        # Send asynchronously using your existing send_email function
+        send_email(
+            to_email=admin_email,
+            subject=f"New Feedback: {subject}",
+            body=f"Message from user {current_user.username if current_user.is_authenticated else 'Anonymous'}:\n\n{message}"
+        )
+
+        flash("Message Sent! Thank you for your feedback.", category="success")
+        return redirect(url_for("contact"))
 
     return render_template("contact.html", form=form, current_user=current_user)
 
