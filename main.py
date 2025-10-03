@@ -73,7 +73,7 @@ def get_local_now():
 def send_email(to_email, subject, body):
     def task():
         try:
-            with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=30) as connection:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as connection:
                 connection.starttls()
                 connection.login(
                     user=os.environ.get("ADMIN_EMAIL"),
