@@ -71,8 +71,9 @@ with app.app_context():
 def get_local_now():
     return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
+    print(f"[send_email] Trying to send email to {to_email}")
     try:
-        with smtplib.SMTP("smtp.mail.yahoo.com", 587, timeout=10) as connection:
+        with smtplib.SMTP("smtp.mail.yahoo.com",587) as connection:
             connection.starttls()
             connection.login(
                 user=os.environ.get("ADMIN_EMAIL"),
