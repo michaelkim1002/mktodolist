@@ -370,10 +370,10 @@ def contact():
 def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
+def start_background_tasks():
+    with app.app_context():
+        threading.Thread(target=check_late_tasks, daemon=True).start()
 
-# if __name__ == "__main__":
-#     print("Starting background late task checker thread...")
-#     with app.app_context():
-#         threading.Thread(target=check_late_tasks, daemon=True).start()
-#
-#     app.run(debug=False, port=5001)
+start_background_tasks()
+if __name__ == "__main__":
+     app.run(debug=False, port=5001)
