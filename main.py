@@ -133,7 +133,7 @@ def check_late_tasks():
                 print("Error in check_late_tasks:", e)
                 db.session.rollback()
 
-            time_module.sleep(30)
+            time_module.sleep(15)
 
 @app.route('/', methods=["GET"])
 def show_tasks():
@@ -371,10 +371,9 @@ def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
 
-@app.before_first_request
-def start_background_thread():
-    print("Starting background late task checker thread...")
-    threading.Thread(target=check_late_tasks, daemon=True).start()
-
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    print("Starting background late task checker thread...")
+    with app.app_context():
+        threading.Thread(target=check_late_tasks, daemon=True).start()
+
+    app.run(debug=False, port=5001)
