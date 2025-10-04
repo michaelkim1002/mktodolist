@@ -71,30 +71,22 @@ with app.app_context():
 def get_local_now():
     return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
-    def task():
-        try:
-            with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as connection:
-                connection.starttls()
-                connection.login(
-                    user=os.environ.get("ADMIN_EMAIL"),
-                    password=os.environ.get("ADMIN_EMAIL_PASSWORD")
-                )
-                msg = EmailMessage()
-                msg["Subject"] = subject
-                msg["From"] = os.environ.get("ADMIN_EMAIL")
-                msg["To"] = to_email
-                msg.set_content(body)
-                connection.send_message(msg)
-            print(f"[send_email_async] Sent email to {to_email}")
-        except smtplib.SMTPAuthenticationError:
-            print(f"[send_email] SMTP Authentication Error for {to_email}")
-        except smtplib.SMTPException as e:
-            print(f"[send_email] SMTP Exception for {to_email}: {e}")
-        except Exception as e:
-            print(f"[send_email] General error for {to_email}: {e}")
-
-    threading.Thread(target=task, daemon=True).start()
-
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as connection:
+            connection.starttls()
+            connection.login(
+                user=os.environ.get("ADMIN_EMAIL"),
+                password=os.environ.get("ADMIN_EMAIL_PASSWORD")
+            )
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = os.environ.get("ADMIN_EMAIL")
+            msg["To"] = to_email
+            msg.set_content(body)
+            connection.send_message(msg)
+        print(f"[send_email_async] Sent email to {to_email}")
+    except Exception as e:
+        print(f"[send_email] General error for {to_email}: {e}")
 def check_late_tasks():
     print("[check_late_tasks] Thread started")
     with app.app_context():
@@ -379,11 +371,10 @@ def logout():
     logout_user()
     return redirect(url_for('show_tasks'))
 
-if __name__ == "__main__":
+@app.before_first_request
+def start_background_thread():
     print("Starting background late task checker thread...")
+    threading.Thread(target=check_late_tasks, daemon=True).start()
 
-    # Start the background thread after app context is ready
-    with app.app_context():
-        threading.Thread(target=check_late_tasks, daemon=True).start()
-
-    app.run(debug=False, port=5001)
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)
