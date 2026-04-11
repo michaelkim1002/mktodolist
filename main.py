@@ -10,6 +10,7 @@ from forms import CreateTaskForm, RegisterForm, LoginForm, ContactForm, NewPassw
 from random import randint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text, Boolean, Date, Time, func
+from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash, check_password_hash
 from zoneinfo import ZoneInfo
 import os
@@ -66,8 +67,14 @@ class Task(db.Model):
 
     user = relationship("User", back_populates="tasks")
 
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
+        print("Database initialized successfully")
+except OperationalError as e:
+    print("Database connection failed:", e)
+except Exception as e:
+    print("Unexpected DB error:", e)
 def get_local_now():
     return datetime.now(local_tz).replace(second=0, microsecond=0)
 def send_email(to_email, subject, body):
